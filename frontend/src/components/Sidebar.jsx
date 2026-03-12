@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { setOpenSidebar } from '../redux/slices/authSlice';
 import clsx from 'clsx';
-import { MdDashboard, MdOutlineAddTask, MdOutlinePendingActions, MdTaskAlt } from "react-icons/md";
+import { MdDashboard, MdOutlineAddTask, MdOutlinePendingActions, MdSettings, MdTaskAlt } from "react-icons/md";
 import { FaTasks, FaTrashAlt, FaUser, FaUsers } from "react-icons/fa";
 
 const linkData= [
@@ -82,6 +82,12 @@ const Sidebar= () => {
                     <NavLink el={link} key={link.label} />
                 ))
             }
+        </div>
+        <div className=''>
+            <button className='w-full flex gap-2 p-2 items-center text-lg text-gray-800'>
+                <MdSettings />
+                <span>Settings</span>
+            </button>
         </div>
     </div>
   )
