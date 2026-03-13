@@ -1,11 +1,11 @@
 import React, { Fragment, useState } from 'react'
 import { HiBellAlert } from "react-icons/hi2";
 import { BiSolidMessageRounded } from 'react-icons/bi';
-import { data, href } from 'react-router-dom';
 import { Popover, PopoverButton, PopoverPanel, Transition } from '@headlessui/react';
 import { IoIosNotificationsOutline } from 'react-icons/io';
 import { Link } from 'react-router-dom';
 import moment from "moment";
+import {data} from '../assets/data';
 
 const ICONS= {
     alert: (
@@ -20,10 +20,10 @@ const NotificationPanel = () => {
     const [open, setOpen]=useState(false);
     const [selected, setSelected]=useState(null);
     // const [data, setData] = useState([]);
-    const data = [
-  { id: 1, text: "New task assigned" },
-  { id: 2, text: "Message received" }
-];
+//     const data = [
+//   { id: 1, text: "New task assigned" },
+//   { id: 2, text: "Message received" }
+// ];
 
     // const { data, refetch }= useGetNotificationsQuery();
     // const [markAsRead]= useMarkNotiAsReadMutation();
