@@ -5,7 +5,7 @@ export const formatDate = (date) => {
     const year= date.getFullYear();
 
     const formattedDate= `${day}-${month}-${year}`;
-    return formattedDate;  
+    return formattedDate;
 }
 
 export function dataFormatter(dataString) {
