@@ -4,12 +4,13 @@ import { MdGridView } from 'react-icons/md'
 import { useParams } from 'react-router-dom';
 import Loading from '../components/Loader';
 import Title from '../components/Title';
-import { Button } from '@headlessui/react';
+import { Button, TabPanel } from '@headlessui/react';
 import { IoMdAdd } from 'react-icons/io';
 import Tabs from '../components/Tabs';
 import TaskTitle from '../components/TaskTitle';
 import BoardView from '../components/BoardView';
 import { tasks } from '../assets/data';
+import Table from '../components/task/Table';
 
 const TABS= [
   {title: "Board View", icon: <MdGridView />},
@@ -48,19 +49,27 @@ function Tasks() {
         )}
       </div>
       <div className="mt-4">
-        <Tabs tabs={TABS} setSelected={setSelected}>
-          {!status && (
-            <div className='w-full flex justify-between gap-4 md:gap-x-12 py-4'>
-              <TaskTitle label="To Do" className={TASK_TYPE.todo}></TaskTitle>
-              <TaskTitle label="In Progress" className={TASK_TYPE["in progress"]}></TaskTitle>
-              <TaskTitle label="completed" className={TASK_TYPE.completed}></TaskTitle>
+        {/* <Tabs tabs={TABS} setSelected={setSelected}> */}
+          <Tabs tabs={TABS}>
+  
+              <TabPanel>
+                  {!status && (
+                    <div className='w-full flex justify-between gap-4 md:gap-x-12 py-4'>
+                      <TaskTitle label="To Do" className={TASK_TYPE.todo} />
+                      <TaskTitle label="In Progress" className={TASK_TYPE["in progress"]} />
+                      <TaskTitle label="Completed" className={TASK_TYPE.completed} />
+                    </div>
+                  )}
+                  <BoardView tasks={tasks} />
+                </TabPanel>
 
-            </div>
-          )}
-          {
-            selected ===0 ? <BoardView tasks={tasks} /> : <div></div>
-          }
-        </Tabs>
+                  <TabPanel>
+                    <div className='w-full'>
+                      <Table tasks={tasks} />
+                    </div>
+                  </TabPanel>
+
+            </Tabs>
       </div>
     </div>
   )

@@ -5,7 +5,6 @@ import { Popover, PopoverButton, PopoverPanel, Transition } from '@headlessui/re
 import { IoIosNotificationsOutline } from 'react-icons/io';
 import { Link } from 'react-router-dom';
 import moment from "moment";
-import {data} from '../assets/data';
 
 const ICONS= {
     alert: (
@@ -19,8 +18,8 @@ const ICONS= {
 const NotificationPanel = () => {
     const [open, setOpen]=useState(false);
     const [selected, setSelected]=useState(null);
-    // const [data, setData] = useState([]);
-//     const data = [
+    const [data, setData] = useState([]);
+    // const data = [
 //   { id: 1, text: "New task assigned" },
 //   { id: 2, text: "Message received" }
 // ];

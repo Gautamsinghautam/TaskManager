@@ -1,6 +1,6 @@
 
 export const formatDate = (date) => {
-    const month= date.toLocalString("en-US", { month: "short" });
+    const month= date.toLocaleString("en-US", { month: "short" });
     const day= date.getDate();
     const year= date.getFullYear();
 
@@ -34,10 +34,10 @@ export const TASK_TYPE = {
     completed: "bg-green-600",
 };
 
-export const PRIOTITYSTYLES = {
-    high: "text-red-600",
-    medium: "text-yellow-600",
-    low: "text-blue-600",
+export const PRIORITYSTYLES = {
+  high: "text-red-600",
+  medium: "text-yellow-600",
+  low: "text-blue-600",
 };
 
 export const BGS = [
