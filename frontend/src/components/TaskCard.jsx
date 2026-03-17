@@ -8,6 +8,7 @@ import { BiMessageAltDetail } from 'react-icons/bi';
 import { FaList } from 'react-icons/fa';
 import UserInfo from './UserInfo';
 import { IoMdAdd } from 'react-icons/io';
+import AddSubTask from './task/AddSubTask';
 
 const ICONS= {
     high: <MdKeyboardDoubleArrowUp />,
@@ -93,15 +94,15 @@ const TaskCard = ({task}) => {
         )}
         <div className='w-full pb-2'>
             <button
-            disabled={user.isAdmin ? false: true}
-            className='w-full flex gap-4 items-center text-sm text-gray-500 font-semibold disabled:cursor-not-allowed disabled::text-gray-300'
+            onClick={() => setOpen(true)}
+            className='w-full flex gap-4 items-center text-sm text-gray-500 font-semibold hover:text-gray-700 transition-colors'
             >
                 <IoMdAdd className='text-lg' />
                 <span>Add SubTask</span>
             </button>
         </div>
     </div>
-    {/* <AddSubTask open={open} setOpen={setOpen} id={task.id} /> */}
+    <AddSubTask open={open} setOpen={setOpen} id={task.id} />
     
     </>
   )
