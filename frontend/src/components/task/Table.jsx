@@ -13,11 +13,12 @@ const ICONS={
     low: <MdKeyboardArrowDown />
 };
 
-const Table = () => {
+const Table = ({ tasks: tasksData }) => {
     const [openDialog, setOpenDialog] = useState(false);
     const [selected, setSelected] = useState(null);
-
-    const deleteClicks = () => {};
+    
+    // Use passed tasks or fallback to imported tasks
+    const tasksList = tasksData || tasks;
 
     const TableHeader = () => (
         <thead className='w-full border-b border-gray-300'>
@@ -104,7 +105,7 @@ const Table = () => {
             <table className='w-full'>
                 <TableHeader />
                 <tbody>
-                    {tasks.map((task, index) => (
+                    {tasksList.map((task, index) => (
                         <TableRow key={index} task={task} />
                     ))}
                 </tbody>

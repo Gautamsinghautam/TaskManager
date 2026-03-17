@@ -88,13 +88,13 @@ function App() {
                 <Route element= {<Layout />}>
                   <Route path="/" element={<Navigate to='/dashboard' />} />
                   <Route path='/dashboard' element={<Dashboard />} />
+                  <Route path='/tasks/:id' element={<TaskDetails />} />
                   <Route path='/tasks' element={<Tasks />} />
                   <Route path='/completed/:status' element={<Tasks />} />
                   <Route path='/in-progress/:status' element={<Tasks />} />
                   <Route path='/todo/:status' element={<Tasks />} />
                   <Route path='/team' element={<Users />} />
                   <Route path='/trashed' element={<Trash />} />
-                  <Route path='task/:id' element={<TaskDetails />} />
                 </Route>
 
                 <Route path='/log-in' element={<Login />} />

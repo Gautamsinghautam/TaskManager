@@ -11,6 +11,9 @@ const Users = () => {
   const [open, setOpen] = useState(false);
   const [openAction, setOpenAction] = useState(false);
   const [selected, setSelected] = useState(null);
+  const [users, setUsers] = useState([...summary.users]);
+  const [editUser, setEditUser] = useState(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
   const TableHeader = () => (
     <thead className='border-b border-gray-300'>
@@ -58,14 +61,21 @@ const Users = () => {
           className='text-blue-600 hover:text-blue-500 font-semibold sm:px-0'
           label='Edit'
           type='button'
-          // onClick={() => editClick(user)}
+          onClick={() => {
+            setEditUser(user);
+            setEditModalOpen(true);
+          }}
         />
 
         <Button
           className='text-red-700 hover:text-red-500 font-semibold sm:px-0'
           label='Delete'
           type='button'
-          // onClick={() => deleteClick(user?._id)}
+          onClick={() => {
+            if (window.confirm(`Delete user: ${user.name}?`)) {
+              setUsers(users => users.filter(u => u._id !== user._id));
+            }
+          }}
         />
       </td>
     </tr>
@@ -88,13 +98,77 @@ const Users = () => {
           <table className='w-full mb-5'>
             <TableHeader />
             <tbody>
-              {summary.users?.map((user, index) => (
+              {users.map((user, index) => (
                 <TableRow key={index} user={user} />
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {editModalOpen && (
+        <div className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40'>
+          <div className='bg-white rounded shadow-lg p-6 w-full max-w-md'>
+            <h2 className='text-lg font-bold mb-4'>Edit User</h2>
+            <form
+              onSubmit={e => {
+                e.preventDefault();
+                setUsers(users => users.map(u => u._id === editUser._id ? editUser : u));
+                setEditModalOpen(false);
+              }}
+            >
+              <div className='mb-3'>
+                <label className='block text-sm mb-1'>Name</label>
+                <input
+                  className='w-full border px-2 py-1 rounded'
+                  value={editUser.name}
+                  onChange={e => setEditUser({ ...editUser, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div className='mb-3'>
+                <label className='block text-sm mb-1'>Title</label>
+                <input
+                  className='w-full border px-2 py-1 rounded'
+                  value={editUser.title}
+                  onChange={e => setEditUser({ ...editUser, title: e.target.value })}
+                  required
+                />
+              </div>
+              <div className='mb-3'>
+                <label className='block text-sm mb-1'>Email</label>
+                <input
+                  className='w-full border px-2 py-1 rounded'
+                  value={editUser.email}
+                  onChange={e => setEditUser({ ...editUser, email: e.target.value })}
+                  required
+                />
+              </div>
+              <div className='mb-3'>
+                <label className='block text-sm mb-1'>Role</label>
+                <input
+                  className='w-full border px-2 py-1 rounded'
+                  value={editUser.role}
+                  onChange={e => setEditUser({ ...editUser, role: e.target.value })}
+                  required
+                />
+              </div>
+              <div className='flex gap-2 justify-end'>
+                <button
+                  type='button'
+                  className='px-4 py-2 rounded bg-gray-300 text-gray-700'
+                  onClick={() => setEditModalOpen(false)}
+                >Cancel</button>
+                <button
+                  type='submit'
+                  className='px-4 py-2 rounded bg-blue-600 text-white'
+                >Save</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
