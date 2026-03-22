@@ -54,7 +54,7 @@ const AddTask = ({ open, setOpen, task }) => {
   const [assets, setAssets] = useState([]);
   const [uploading, setUploading] = useState(false);
 
-  // Update priority when task changes
+
   useEffect(() => {
     if (task?.priority) {
       const upperPriority = task.priority.toUpperCase();
