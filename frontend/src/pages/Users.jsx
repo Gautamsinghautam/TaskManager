@@ -1,19 +1,139 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Title from "../components/Title";
 import Button from "../components/Button";
 import { IoMdAdd } from "react-icons/io";
 import { summary } from "../assets/data";
 import { getInitials } from "../utils";
 import clsx from "clsx";
+import AddUser from "../components/AddUser";
+import ConfirmatioDialog from "../components/Dialogs";
+import { useGetTeamListQuery, useDeleteUserMutation, useUserActionMutation } from "../redux/slices/api/userApiSlice";
+import Loading from "../components/Loader";
+import { toast } from "react-toastify";
+import { useSelector } from "react-redux";
 
 const Users = () => {
-  const [openDialog, setOpenDialog] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [openAction, setOpenAction] = useState(false);
+  // Get current user to check admin status
+  const { user: currentUser } = useSelector((state) => state.auth);
+  const isAdmin = currentUser?.isAdmin || false;
+
+  // Modal states - consolidated
+  const [modals, setModals] = useState({
+    delete: false,
+    action: false,
+    edit: false,
+    add: false
+  });
+  
   const [selected, setSelected] = useState(null);
-  const [users, setUsers] = useState([...summary.users]);
   const [editUser, setEditUser] = useState(null);
-  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [users, setUsers] = useState([]);
+
+  // API hooks
+  const { data: teamData, isLoading, refetch } = useGetTeamListQuery();
+  const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
+  const [userAction, { isLoading: isUpdating }] = useUserActionMutation();
+
+  // Generic handler for API operations with confirmation
+  const handleAPIOperation = async (operation, operationName, successMsg, onSuccess) => {
+    try {
+      await operation().unwrap();
+      toast.success(successMsg);
+      refetch();
+      onSuccess?.();
+    } catch (error) {
+      toast.error(error?.data?.message || `Failed to ${operationName}`);
+    }
+  };
+
+  // User Action Handler (Activate/Deactivate)
+  const userActionHandler = async () => {
+    await handleAPIOperation(
+      () => userAction({ isActive: !selected?.isActive, id: selected?._id }),
+      selected?.isActive ? 'disable' : 'activate',
+      `User ${selected?.isActive ? 'disabled' : 'activated'} successfully`,
+      () => {
+        setModals(prev => ({ ...prev, action: false }));
+        setSelected(null);
+      }
+    );
+  };
+
+  // Delete Handler
+  const deleteUserHandler = async () => {
+    await handleAPIOperation(
+      () => deleteUser(selected._id),
+      'delete',
+      'User deleted successfully',
+      () => {
+        setModals(prev => ({ ...prev, delete: false }));
+        setSelected(null);
+      }
+    );
+  };
+
+  // Click handlers
+  const openDeleteDialog = (userId) => {
+    setSelected(users.find(u => u._id === userId));
+    setModals(prev => ({ ...prev, delete: true }));
+  };
+
+  const openEditDialog = (user) => {
+    setEditUser({ ...user });
+    setModals(prev => ({ ...prev, edit: true }));
+  };
+
+  const openActionDialog = (user) => {
+    setSelected(user);
+    setModals(prev => ({ ...prev, action: true }));
+  };
+
+  const openAddDialog = () => {
+    setModals(prev => ({ ...prev, add: true }));
+  };
+
+  // Update users when teamData changes - Merge DB data with mock data
+  useEffect(() => {
+    if (!isLoading) {
+      // Start with DB users
+      let mergedUsers = [];
+      
+      if (teamData && Array.isArray(teamData)) {
+        mergedUsers = [...teamData];
+      } else if (teamData && teamData.status === false) {
+        // API returned an error, use mock data
+        console.log("API error, using mock data");
+      }
+      
+      // Add mock users that are not in the DB
+      if (summary?.users && Array.isArray(summary.users)) {
+        const dbUserIds = new Set(mergedUsers.map(u => u._id));
+        const mockUsersNotInDb = summary.users.filter(
+          mockUser => !dbUserIds.has(mockUser._id)
+        );
+        
+        // Enrich mock users with email field if missing
+        const enrichedMockUsers = mockUsersNotInDb.map(user => ({
+          ...user,
+          email: user.email || `${user.name.replace(/\s+/g, '.').toLowerCase()}@example.com`,
+          isActive: user.isActive !== undefined ? user.isActive : true
+        }));
+        
+        mergedUsers = [...mergedUsers, ...enrichedMockUsers];
+      }
+      
+      // If no API data and no enrichment, use all mock users
+      if (mergedUsers.length === 0 && summary?.users) {
+        mergedUsers = summary.users.map(user => ({
+          ...user,
+          email: user.email || `${user.name.replace(/\s+/g, '.').toLowerCase()}@example.com`,
+          isActive: user.isActive !== undefined ? user.isActive : true
+        }));
+      }
+      
+      setUsers(mergedUsers);
+    }
+  }, [teamData, isLoading]);
 
   const TableHeader = () => (
     <thead className='border-b border-gray-300'>
@@ -40,15 +160,17 @@ const Users = () => {
         </div>
       </td>
 
-      <td className='p-2'>{user.title}</td>
-      <td className='p-2'>{user.email || "user.emal.com"}</td>
-      <td className='p-2'>{user.role}</td>
+      <td className='p-2'>{user.title || "N/A"}</td>
+      <td className='p-2'>{user.email || "user@email.com"}</td>
+      <td className='p-2'>{user.role || "N/A"}</td>
 
       <td>
         <button
-          // onClick={() => userStatusClick(user)}
+          onClick={() => openActionDialog(user)}
+          disabled={!isAdmin}
           className={clsx(
             "w-fit px-4 py-1 rounded-full",
+            !isAdmin && "opacity-50 cursor-not-allowed",
             user?.isActive ? "bg-blue-200" : "bg-yellow-100"
           )}
         >
@@ -57,26 +179,23 @@ const Users = () => {
       </td>
 
       <td className='p-2 flex gap-4 justify-end'>
-        <Button
-          className='text-blue-600 hover:text-blue-500 font-semibold sm:px-0'
-          label='Edit'
-          type='button'
-          onClick={() => {
-            setEditUser(user);
-            setEditModalOpen(true);
-          }}
-        />
+        {isAdmin && (
+          <>
+            <Button
+              className='text-blue-600 hover:text-blue-500 font-semibold sm:px-0'
+              label='Edit'
+              type='button'
+              onClick={() => openEditDialog(user)}
+            />
 
-        <Button
-          className='text-red-700 hover:text-red-500 font-semibold sm:px-0'
-          label='Delete'
-          type='button'
-          onClick={() => {
-            if (window.confirm(`Delete user: ${user.name}?`)) {
-              setUsers(users => users.filter(u => u._id !== user._id));
-            }
-          }}
-        />
+            <Button
+              className='text-red-700 hover:text-red-500 font-semibold sm:px-0'
+              label='Delete'
+              type='button'
+              onClick={() => openDeleteDialog(user._id)}
+            />
+          </>
+        )}
       </td>
     </tr>
   );
@@ -85,90 +204,87 @@ const Users = () => {
     <div className='w-full md:px-1 px-0 mb-6'>
       <div className='flex items-center justify-between mb-8'>
         <Title title='  Team Members' />
-        <Button
-          label='Add New User'
-          icon={<IoMdAdd className='text-lg' />}
-          className='flex flex-row-reverse gap-1 items-center bg-blue-600 text-white rounded-md 2xl:py-2.5'
-          onClick={() => setOpen(true)}
-        />
+        {isAdmin && (
+          <Button
+            label='Add New User'
+            icon={<IoMdAdd className='text-lg' />}
+            className='flex flex-row-reverse gap-1 items-center bg-blue-600 text-white rounded-md 2xl:py-2.5'
+            onClick={openAddDialog}
+          />
+        )}
       </div>
 
+      {isLoading ? (
+        <div className='py-10'>
+          <Loading />
+        </div>
+      ) : (
       <div className='bg-white px-2 md:px-4 py-4 shadow-md rounded'>
         <div className='overflow-x-auto'>
           <table className='w-full mb-5'>
             <TableHeader />
             <tbody>
-              {users.map((user, index) => (
-                <TableRow key={index} user={user} />
-              ))}
+              {users.length > 0 ? (
+                users.map((user, index) => (
+                  <TableRow key={user._id || index} user={user} />
+                ))
+              ) : (
+                <tr>
+                  <td colSpan='5' className='p-2 text-center text-gray-500'>
+                    No users found
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
-
-      {/* Edit Modal */}
-      {editModalOpen && (
-        <div className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40'>
-          <div className='bg-white rounded shadow-lg p-6 w-full max-w-md'>
-            <h2 className='text-lg font-bold mb-4'>Edit User</h2>
-            <form
-              onSubmit={e => {
-                e.preventDefault();
-                setUsers(users => users.map(u => u._id === editUser._id ? editUser : u));
-                setEditModalOpen(false);
-              }}
-            >
-              <div className='mb-3'>
-                <label className='block text-sm mb-1'>Name</label>
-                <input
-                  className='w-full border px-2 py-1 rounded'
-                  value={editUser.name}
-                  onChange={e => setEditUser({ ...editUser, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div className='mb-3'>
-                <label className='block text-sm mb-1'>Title</label>
-                <input
-                  className='w-full border px-2 py-1 rounded'
-                  value={editUser.title}
-                  onChange={e => setEditUser({ ...editUser, title: e.target.value })}
-                  required
-                />
-              </div>
-              <div className='mb-3'>
-                <label className='block text-sm mb-1'>Email</label>
-                <input
-                  className='w-full border px-2 py-1 rounded'
-                  value={editUser.email}
-                  onChange={e => setEditUser({ ...editUser, email: e.target.value })}
-                  required
-                />
-              </div>
-              <div className='mb-3'>
-                <label className='block text-sm mb-1'>Role</label>
-                <input
-                  className='w-full border px-2 py-1 rounded'
-                  value={editUser.role}
-                  onChange={e => setEditUser({ ...editUser, role: e.target.value })}
-                  required
-                />
-              </div>
-              <div className='flex gap-2 justify-end'>
-                <button
-                  type='button'
-                  className='px-4 py-2 rounded bg-gray-300 text-gray-700'
-                  onClick={() => setEditModalOpen(false)}
-                >Cancel</button>
-                <button
-                  type='submit'
-                  className='px-4 py-2 rounded bg-blue-600 text-white'
-                >Save</button>
-              </div>
-            </form>
-          </div>
-        </div>
       )}
+
+      {/* Edit User Modal */}
+      <AddUser 
+        open={modals.edit} 
+        setOpen={(open) => {
+          setModals(prev => ({ ...prev, edit: open }));
+          if (!open) setEditUser(null);
+        }}
+        userData={editUser}
+        onUserAdded={() => {
+          refetch();
+        }}
+      />
+
+      {/* Add User Modal */}
+      <AddUser 
+        open={modals.add} 
+        setOpen={(open) => setModals(prev => ({ ...prev, add: open }))}
+        userData={null}
+        onUserAdded={() => {
+          refetch();
+        }}
+      />
+
+      {/* Delete User Confirmation */}
+      <ConfirmatioDialog
+        open={modals.delete}
+        setOpen={(open) => setModals(prev => ({ ...prev, delete: open }))}
+        msg={selected ? `Are you sure you want to delete ${selected.name}? This action cannot be undone.` : ''}
+        type='delete'
+        onClick={deleteUserHandler}
+      />
+
+      {/* User Action Confirmation (Activate/Deactivate) */}
+      <ConfirmatioDialog
+        open={modals.action}
+        setOpen={(open) => setModals(prev => ({ ...prev, action: open }))}
+        msg={
+          selected
+            ? `Are you sure you want to ${selected.isActive ? 'disable' : 'activate'} ${selected.name}?`
+            : ''
+        }
+        type={selected?.isActive ? 'disable' : 'activate'}
+        onClick={userActionHandler}
+      />
     </div>
   );
 };

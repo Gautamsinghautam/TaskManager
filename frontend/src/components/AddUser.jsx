@@ -1,37 +1,74 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useSelector } from "react-redux";
 import ModalWrapper from "./ModalWrapper";
-import { Dialog } from "@headlessui/react";
+import { DialogTitle } from "@headlessui/react";
 import Textbox from "./Textbox";
 import Loading from "./Loader";
 import Button from "./Button";
+import { toast } from "react-toastify";
+import { useCreateUserMutation, useUpdateUserMutation } from "../redux/slices/api/userApiSlice";
+import { useDispatch } from "react-redux";
+import { setCredentials } from "../redux/slices/authSlice";
 
-const AddUser = ({ open, setOpen, userData }) => {
-  let defaultValues = userData ?? {};
-  const { user } = useSelector((state) => state.auth);
-
-  const isLoading = false,
-    isUpdating = false;
+const AddUser = ({ open, setOpen, userData, onUserAdded }) => {
+  let defaultValues = userData ?? { name: "", title: "", email: "", role: "", password: "" };
+  
+  const dispatch = useDispatch();
+  const [createUser, { isLoading: isCreating }] = useCreateUserMutation();
+  const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation();
 
   const {
     register,
     handleSubmit,
     formState: { errors },
+    reset,
   } = useForm({ defaultValues });
 
-  const handleOnSubmit = () => {};
+  useEffect(() => {
+    if (open) {
+      reset(userData ?? { name: "", title: "", email: "", role: "", password: "" });
+    }
+  }, [open, userData, reset]);
+
+  const handleOnSubmit = async (data) => {
+    try {
+      if (userData?._id) {
+        // Update existing user (own profile)
+        const result = await updateUser(data).unwrap();
+        toast.success("Profile updated successfully");
+        
+        // Update Redux store with new user data
+        if (result.user) {
+          dispatch(setCredentials(result.user));
+        }
+      } else {
+        // Create new user
+        if (!data.password) {
+          toast.error("Password is required for new users");
+          return;
+        }
+        await createUser(data).unwrap();
+        toast.success("User created successfully");
+      }
+      setOpen(false);
+      onUserAdded?.();
+    } catch (error) {
+      toast.error(error?.data?.message || "Failed to save user");
+    }
+  };
+
+  const isLoading = isCreating || isUpdating;
 
   return (
     <>
       <ModalWrapper open={open} setOpen={setOpen}>
         <form onSubmit={handleSubmit(handleOnSubmit)} className=''>
-          <Dialog.Title
+          <DialogTitle
             as='h2'
             className='text-base font-bold leading-6 text-gray-900 mb-4'
           >
             {userData ? "UPDATE PROFILE" : "ADD NEW USER"}
-          </Dialog.Title>
+          </DialogTitle>
           <div className='mt-2 flex flex-col gap-6'>
             <Textbox
               placeholder='Full name'
@@ -61,6 +98,7 @@ const AddUser = ({ open, setOpen, userData }) => {
               name='email'
               label='Email Address'
               className='w-full rounded'
+              disabled={userData ? true : false}
               register={register("email", {
                 required: "Email Address is required!",
               })}
@@ -78,6 +116,24 @@ const AddUser = ({ open, setOpen, userData }) => {
               })}
               error={errors.role ? errors.role.message : ""}
             />
+
+            {!userData && (
+              <Textbox
+                placeholder='Password'
+                type='password'
+                name='password'
+                label='Password'
+                className='w-full rounded'
+                register={register("password", {
+                  required: "Password is required!",
+                  minLength: {
+                    value: 6,
+                    message: "Password must be at least 6 characters!",
+                  },
+                })}
+                error={errors.password ? errors.password.message : ""}
+              />
+            )}
           </div>
 
           {isLoading || isUpdating ? (

@@ -1,6 +1,6 @@
 import { PRIORITYSTYLES, TASK_TYPE } from "../utils";
 import clsx from "clsx";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   MdDelete,
   MdKeyboardArrowDown,
@@ -8,11 +8,11 @@ import {
   MdKeyboardDoubleArrowUp,
   MdOutlineRestore,
 } from "react-icons/md";
-import { tasks } from "../assets/data";
 import Title from "../components/Title";
 import Button from "../components/Button";
-import AddUser from "../components/AddUser";
 import ConfirmatioDialog from "../components/Dialogs";
+import { useGetAllTasksQuery, useDeleteRestoreTaskMutation } from "../redux/slices/api/taskApiSlice";
+import { toast } from "react-toastify";
 
 const ICONS = {
   high: <MdKeyboardDoubleArrowUp />,
@@ -22,57 +22,98 @@ const ICONS = {
 
 const Trash = () => {
   const [openDialog, setOpenDialog] = useState(false);
-  const [open, setOpen] = useState(false);
   const [msg, setMsg] = useState(null);
   const [type, setType] = useState("delete");
   const [selected, setSelected] = useState("");
-  const [trashTasks, setTrashTasks] = useState([...tasks]);
+  const [trashTasks, setTrashTasks] = useState([]);
+
+  // Fetch trashed tasks from API
+  const { data: response, isLoading, refetch } = useGetAllTasksQuery({
+    istrashed: "true",
+  });
+
+  const [deleteRestoreTask] = useDeleteRestoreTaskMutation();
+
+  // Update local state when API data changes
+  useEffect(() => {
+    if (response?.tasks) {
+      console.log("Trash tasks fetched:", response.tasks);
+      setTrashTasks(response.tasks);
+    }
+  }, [response]);
 
   const deleteAllClick = () => {
-  console.log('Delete All Clicked');
-  setType("deleteAll");
-  setMsg("Do you want to permanently delete all items?");
-  setOpenDialog(true);
+    console.log('Delete All Clicked');
+    setType("deleteAll");
+    setMsg("Do you want to permanently delete all items?");
+    setOpenDialog(true);
   };
 
   const restoreAllClick = () => {
-  console.log('Restore All Clicked');
-  setType("restoreAll");
-  setMsg("Do you want to restore all items in the trash?");
-  setOpenDialog(true);
+    console.log('Restore All Clicked');
+    setType("restoreAll");
+    setMsg("Do you want to restore all items in the trash?");
+    setOpenDialog(true);
   };
 
   const deleteClick = (id) => {
-  console.log('Delete Clicked', id);
-  setType("delete");
-  setSelected(id);
-  setMsg("Do you want to delete this item?");
-  setOpenDialog(true);
+    console.log('Delete Clicked', id);
+    setType("delete");
+    setSelected(id);
+    setMsg("Do you want to delete this item?");
+    setOpenDialog(true);
   };
 
   const restoreClick = (id) => {
-  console.log('Restore Clicked', id);
-  setSelected(id);
-  setType("restore");
-  setMsg("Do you want to restore the selected item?");
-  setOpenDialog(true);
+    console.log('Restore Clicked', id);
+    setSelected(id);
+    setType("restore");
+    setMsg("Do you want to restore the selected item?");
+    setOpenDialog(true);
   };
 
-  const deleteRestoreHandler = () => {
+  const deleteRestoreHandler = async () => {
     console.log('Dialog Confirmed', type, selected);
-    if (type === "deleteAll") {
-      setTrashTasks([]);
-    } else if (type === "restoreAll") {
-      setTrashTasks([]); // You can move restored items elsewhere if needed
-    } else if (type === "delete") {
-      setTrashTasks(tasks => tasks.filter(t => t._id !== selected));
-    } else if (type === "restore") {
-      setTrashTasks(tasks => tasks.filter(t => t._id !== selected)); // You can move restored item elsewhere if needed
+    try {
+      if (type === "deleteAll") {
+        // For deleteAll, use a dummy ID since the backend ignores it for bulk operations
+        await deleteRestoreTask({
+          id: "bulk",
+          actionType: "deleteAll",
+        }).unwrap();
+        setTrashTasks([]);
+        toast.success("All items deleted permanently");
+      } else if (type === "restoreAll") {
+        // For restoreAll, use a dummy ID since the backend ignores it for bulk operations
+        await deleteRestoreTask({
+          id: "bulk",
+          actionType: "restoreAll",
+        }).unwrap();
+        setTrashTasks([]);
+        toast.success("All items restored successfully");
+      } else if (type === "delete") {
+        await deleteRestoreTask({
+          id: selected,
+          actionType: "delete",
+        }).unwrap();
+        setTrashTasks(tasks => tasks.filter(t => t._id !== selected));
+        toast.success("Item deleted permanently");
+      } else if (type === "restore") {
+        await deleteRestoreTask({
+          id: selected,
+          actionType: "restore",
+        }).unwrap();
+        setTrashTasks(tasks => tasks.filter(t => t._id !== selected));
+        toast.success("Item restored successfully");
+      }
+      setOpenDialog(false);
+      setSelected("");
+      setType("delete");
+      setMsg(null);
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error(error?.data?.message || "Operation failed");
     }
-    setOpenDialog(false);
-    setSelected("");
-    setType("delete");
-    setMsg(null);
   };
 
   const TableHeader = () => (
@@ -138,30 +179,40 @@ const Trash = () => {
               icon={<MdOutlineRestore className='text-lg hidden md:flex' />}
               className='flex flex-row-reverse gap-1 items-center  text-black text-sm md:text-base rounded-md 2xl:py-2.5'
               onClick={() => restoreAllClick()}
+              disabled={trashTasks?.length === 0}
             />
             <Button
               label='Delete All'
               icon={<MdDelete className='text-lg hidden md:flex' />}
               className='flex flex-row-reverse gap-1 items-center  text-red-600 text-sm md:text-base rounded-md 2xl:py-2.5'
               onClick={() => deleteAllClick()}
+              disabled={trashTasks?.length === 0}
             />
           </div>
         </div>
         <div className='bg-white px-2 md:px-6 py-4 shadow-md rounded'>
-          <div className='overflow-x-auto'>
-            <table className='w-full mb-5'>
-              <TableHeader />
-              <tbody>
-                {trashTasks?.map((tk, id) => (
-                  <TableRow key={id} item={tk} />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {isLoading ? (
+            <div className='text-center py-8'>
+              <p className='text-gray-500'>Loading trash items...</p>
+            </div>
+          ) : trashTasks?.length === 0 ? (
+            <div className='text-center py-8'>
+              <p className='text-gray-500'>No trashed items</p>
+            </div>
+          ) : (
+            <div className='overflow-x-auto'>
+              <table className='w-full mb-5'>
+                <TableHeader />
+                <tbody>
+                  {trashTasks?.map((tk, id) => (
+                    <TableRow key={id} item={tk} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* <AddUser open={open} setOpen={setOpen} /> */}
 
       <ConfirmatioDialog
         open={openDialog}

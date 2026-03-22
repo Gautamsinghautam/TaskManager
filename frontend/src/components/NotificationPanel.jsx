@@ -5,6 +5,8 @@ import { Popover, PopoverButton, PopoverPanel, Transition } from '@headlessui/re
 import { IoIosNotificationsOutline } from 'react-icons/io';
 import { Link } from 'react-router-dom';
 import moment from "moment";
+import { useGetNotificationQuery, useMarkNotificationReadMutation } from '../redux/slices/api/userApiSlice';
+import ViewNotification from './ViewNotification';
 
 const ICONS= {
     alert: (
@@ -18,17 +20,25 @@ const ICONS= {
 const NotificationPanel = () => {
     const [open, setOpen]=useState(false);
     const [selected, setSelected]=useState(null);
-    const [data, setData] = useState([]);
+    // const [data, setData] = useState([]);
     // const data = [
 //   { id: 1, text: "New task assigned" },
 //   { id: 2, text: "Message received" }
 // ];
 
-    // const { data, refetch }= useGetNotificationsQuery();
-    // const [markAsRead]= useMarkNotiAsReadMutation();
+    const { data, refetch }= useGetNotificationQuery();
+    const [markAsRead]= useMarkNotificationReadMutation();
 
-    const readHandler= () => {};
-    const viewHandler= () => {};
+    const readHandler= async(type, id) => {
+        await markAsRead({type: type, id: id}).unwrap();
+        refetch();
+    };
+    const viewHandler= (el) => {
+        setSelected(el);
+        readHandler("one", el._id);
+        setOpen(true);
+    };
+
 
     const callsToAction = [
         {name: "Cancel", href: "#", icon: ""},
@@ -117,6 +127,8 @@ const NotificationPanel = () => {
             </PopoverPanel>
         </Transition>
     </Popover>
+
+    <ViewNotification open={open} setOpen={setOpen} el={selected} />
     </>
     )
 };

@@ -8,7 +8,8 @@ router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/logout", logoutUser);
 
-router.get("/get-team", protectRoute, isAdminRoute, getTeamList);
+// Allow all authenticated users to see team list, but return based on admin level
+router.get("/get-team", protectRoute, getTeamList);
 router.get("/notification", protectRoute, getNotificationList);
 
 router.put("/profile", protectRoute, updateUserProfile);
