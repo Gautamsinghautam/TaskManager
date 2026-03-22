@@ -1,11 +1,19 @@
 import React from 'react'
 import TaskCard from './TaskCard'
 
-const BoardView = ({tasks}) => {
+const BoardView = ({tasks = []}) => {
+  // Handle null or undefined tasks
+  const tasksList = tasks && Array.isArray(tasks) ? tasks : [];
+  
+  // Normalize stage value for comparison (handle whitespace and casing)
+  const normalizeStage = (stage) => {
+    return stage?.toLowerCase().trim().replace(/\s+/g, ' ') || '';
+  };
+  
   // Organize tasks by stage
-  const todoTasks = tasks.filter(task => task.stage === 'todo');
-  const inProgressTasks = tasks.filter(task => task.stage === 'in progress');
-  const completedTasks = tasks.filter(task => task.stage === 'completed');
+  const todoTasks = tasksList.filter(task => normalizeStage(task.stage) === 'todo');
+  const inProgressTasks = tasksList.filter(task => normalizeStage(task.stage) === 'in progress');
+  const completedTasks = tasksList.filter(task => normalizeStage(task.stage) === 'completed');
 
   const TaskColumn = ({ title, tasks, bgColor }) => (
     <div className='flex-1 bg-gray-50 rounded-lg p-4'>

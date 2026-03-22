@@ -3,27 +3,49 @@ import ModalWrapper from "../ModalWrapper";
 import { Dialog } from "@headlessui/react";
 import Textbox from "../Textbox";
 import Button from "../Button";
+import { toast } from "react-toastify";
+import { useCreateSubTaskMutation } from "../../redux/slices/api/taskApiSlice";
+import { useState } from "react";
 
 const AddSubTask = ({ open, setOpen, id }) => {
   const {
     register,
     handleSubmit,
     formState: { errors },
+    reset,
   } = useForm();
 
-  // const [addSbTask] = useCreateSubTaskMutation();
+  const [isLoading, setIsLoading] = useState(false);
+  const [addSbTask] = useCreateSubTaskMutation();
 
   const handleOnSubmit = async (data) => {
-    // try {
-    //   const res = await addSbTask({ data, id }).unwrap();
-    //   toast.success(res.message);
-    //   setTimeout(() => {
-    //     setOpen(false);
-    //   }, 500);
-    // } catch (err) {
-    //   console.log(err);
-    //   toast.error(err?.data?.message || err.error);
-    // }
+    setIsLoading(true);
+    try {
+      console.log("Submitting sub-task with data:", { ...data, id });
+      const res = await addSbTask({ ...data, id }).unwrap();
+      console.log("Response:", res);
+      toast.success(res.message || "Sub-task added successfully");
+      reset();
+      setOpen(false);
+      setIsLoading(false);
+    } catch (err) {
+      console.error("Error adding sub-task:", err);
+      console.error("Error status:", err?.status);
+      console.error("Error data:", err?.data);
+      console.error("Full error object:", JSON.stringify(err, null, 2));
+      
+      let errorMessage = "Failed to add sub-task";
+      if (err?.status === 0) {
+        errorMessage = "Cannot connect to server. Make sure the backend is running.";
+      } else if (err?.data?.message) {
+        errorMessage = err.data.message;
+      } else if (err?.error) {
+        errorMessage = err.error;
+      }
+      
+      toast.error(errorMessage);
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -77,13 +99,23 @@ const AddSubTask = ({ open, setOpen, id }) => {
           <div className='py-3 mt-4 flex sm:flex-row-reverse gap-4'>
             <Button
               type='submit'
-              className='bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 sm:ml-3 sm:w-auto'
-              label='Add Task'
+              disabled={isLoading}
+              className={`${
+                isLoading 
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-blue-600 hover:bg-blue-700'
+              } text-sm font-semibold text-white sm:ml-3 sm:w-auto`}
+              label={isLoading ? "Adding..." : "Add Task"}
             />
 
             <Button
               type='button'
-              className='bg-white border text-sm font-semibold text-gray-900 sm:w-auto'
+              disabled={isLoading}
+              className={`${
+                isLoading 
+                  ? 'bg-gray-100 border-gray-300 cursor-not-allowed' 
+                  : 'bg-white border border-gray-300'
+              } text-sm font-semibold text-gray-900 sm:w-auto`}
               onClick={() => setOpen(false)}
               label='Cancel'
             />
@@ -94,4 +126,4 @@ const AddSubTask = ({ open, setOpen, id }) => {
   );
 };
 
-export default AddSubTask;
+export default AddSubTask;  

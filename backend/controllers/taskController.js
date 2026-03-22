@@ -135,7 +135,7 @@ export const dashboardStatistics = async (req, res) => {
         //group task by stage and calculate counts
 
         const groupTasks = allTasks.reduce((result, task) => {
-            const stage = task.stage;
+            const stage = task.stage?.toLowerCase() || task.stage;
             if(!result[stage]){
                 result[stage] = 1
             }else {
@@ -177,17 +177,32 @@ export const dashboardStatistics = async (req, res) => {
 export const getTasks = async (req, res) => {
     try {
         const {stage, isTrashed} = req.query;
-        let query = {isTrashed: isTrashed ? true : false };
-        if(stage){
-
-            query.stage = stage;
+        
+        // Convert isTrashed string to boolean
+        let query = {};
+        if (isTrashed !== undefined) {
+            query.isTrashed = isTrashed === "true" || isTrashed === true;
+        } else {
+            query.isTrashed = false; // Default to non-trashed items
         }
+        
+        if(stage){
+            // Normalize stage value to lowercase for consistent matching
+            query.stage = new RegExp(`^${stage}$`, 'i');  // Case-insensitive regex match
+        }
+        
         let queryResult = Task.find(query).populate({
             path: "team", select: "name title email",
         })
         .sort({_id: -1});
 
-        const tasks = await queryResult;
+        let tasks = await queryResult;
+        
+        // Normalize all task stage values to lowercase for consistent frontend filtering
+        tasks = tasks.map(task => ({
+            ...task.toObject(),
+            stage: task.stage?.toLowerCase() || task.stage
+        }));
 
         res.status(200).json({
             status: true,
@@ -236,6 +251,12 @@ export const createSubTask = async (req, res) => {
         task.subTasks.push(newSubTask);
 
         await task.save();
+
+        res.status(200).json({ 
+            status: true, 
+            message: "Sub-task added successfully",
+            task 
+        });
     } catch (error) {
         console.log(error);
         res.status(400).json({ status: false, message: error.message });
@@ -295,10 +316,11 @@ export const deleteRestoreTask = async (req, res) => {
         } else if (actionType === "deleteAll"){
             await Task.deleteMany({ isTrashed: true });
         } else if (actionType === "restore") {
-            const resp = await Task.findById(id);
-
-            resp.isTrashed = false;
-            resp.save();
+            const task = await Task.findById(id);
+            if (task) {
+                task.isTrashed = false;
+                await task.save();
+            }
         } else if (actionType === "restoreAll") {
             await Task.updateMany({isTrashed: true}, {$set: {isTrashed: false}});
         }

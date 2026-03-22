@@ -12,6 +12,7 @@ import BoardView from '../components/BoardView';
 import { tasks } from '../assets/data';
 import Table from '../components/task/Table';
 import AddTask from '../components/task/AddTask';
+import { useGetAllTasksQuery } from '../redux/slices/api/taskApiSlice';
 
 const TABS= [
   {title: "Board View", icon: <MdGridView />},
@@ -29,13 +30,19 @@ function Tasks() {
 
   const [selected, setSelected] = useState(0);
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  // const [loading, setLoading] = useState(false);
   const status = params?.status || "";
 
   // Only show Add Task button if there's no status filter
   const canAddTask = !status;
 
-  return loading ? (
+  const {data, isLoading} = useGetAllTasksQuery({
+    strQuery: status,
+    istrashed: "",
+    search: ""
+  })
+
+  return isLoading ? (
     <div className='py-10'>
       <Loading />
     </div>
@@ -65,7 +72,14 @@ function Tasks() {
                 <TaskTitle label="Completed" className={TASK_TYPE.completed} />
               </div>
             )}
-            <BoardView tasks={tasks} />
+            {selected !== 1 ?(
+              <BoardView tasks={data?.tasks} />
+            ) : (
+              <div className='w-full'>
+                <Table tasks={data?.tasks} />
+              </div>
+            )}
+            
           </div>
 
           {/* List View Tab */}

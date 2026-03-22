@@ -5,6 +5,7 @@ import {
   MdKeyboardArrowDown,
   MdKeyboardArrowUp,
   MdKeyboardDoubleArrowUp,
+  MdAssignment,
 } from "react-icons/md";
 import { FaNewspaper, FaUsers, FaTrash } from "react-icons/fa";
 import { FaArrowsToDot } from "react-icons/fa6";
@@ -14,6 +15,9 @@ import clsx from "clsx";
 import { Chart } from "../components/Chart";
 import { BGS, TASK_TYPE, getInitials, PRIORITYSTYLES } from "../utils";
 import UserInfo from "../components/UserInfo";
+import { use } from "react";
+import { useGetDashboardStatsQuery } from "../redux/slices/api/taskApiSlice";
+import Loading from "../components/Loader";
 
 const TaskTable = ({ tasks }) => {
   const ICONS = {
@@ -57,7 +61,7 @@ const TaskTable = ({ tasks }) => {
       <td className='py-2'>
         <div className='flex'>
           {task.team.map((m, index) => (
-            <div
+            <div  
               key={index}
               className={clsx(
                 "w-7 h-7 rounded-full text-white flex items-center justify-center text-sm -mr-1",
@@ -147,7 +151,6 @@ const UserTable = ({ users }) => {
 };
 const Dashboard = () => {
   const totals = summary.tasks;
-  const trashedTasks = tasks.filter(task => task.isTrashed).length;
 
   const stats = [
     {
@@ -168,7 +171,7 @@ const Dashboard = () => {
       _id: "3",
       label: "TASK IN PROGRESS ",
       total: totals["in progress"] || 0,
-      icon: <MdEdit />,
+      icon: <MdAssignment />,
       bg: "bg-[#f59e0b]",
     },
     {
@@ -177,20 +180,6 @@ const Dashboard = () => {
       total: totals["todo"],
       icon: <FaArrowsToDot />,
       bg: "bg-[#be185d]" || 0,
-    },
-    {
-      _id: "5",
-      label: "TEAM",
-      total: summary?.users?.length || 0,
-      icon: <FaUsers />,
-      bg: "bg-[#7c3aed]",
-    },
-    {
-      _id: "6",
-      label: "TRASH",
-      total: trashedTasks,
-      icon: <FaTrash />,
-      bg: "bg-[#dc2626]",
     },
   ];
 
@@ -215,7 +204,7 @@ const Dashboard = () => {
     );
   };
   return (
-    <div classNamee='h-full py-4'>
+    <div className='h-full py-4'>
       <div className='grid grid-cols-1 md:grid-cols-4 gap-5'>
         {stats.map(({ icon, bg, label, total }, index) => (
           <Card key={index} icon={icon} bg={bg} label={label} count={total} />

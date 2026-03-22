@@ -6,8 +6,10 @@ import { HiDuplicate } from "react-icons/hi";
 import { MdAdd, MdOutlineEdit } from "react-icons/md";
 import { RiDeleteBin6Line } from "react-icons/ri";
 import { Menu, Transition } from "@headlessui/react";
+import { toast } from "react-toastify";
 import AddTask from "./AddTask";
 import AddSubTask from "./AddSubTask";
+import { useDuplicateTaskMutation, useDeleteRestoreTaskMutation, useTrashTaskMutation } from "../../redux/slices/api/taskApiSlice";
 
 const TaskDialog = ({ task }) => {
   const [open, setOpen] = useState(false);
@@ -15,20 +17,38 @@ const TaskDialog = ({ task }) => {
   const [openDialog, setOpenDialog] = useState(false);
 
   const navigate = useNavigate();
+  
+  const [duplicateTask] = useDuplicateTaskMutation();
+  const [trashTaskMutation] = useTrashTaskMutation();
+  const [deleteRestoreTask] = useDeleteRestoreTaskMutation();
 
-  const duplicateHandler = () => {
-    alert('Task duplicated!');
-    // TODO: Implement actual duplicate logic
+  const duplicateHandler = async() => {
+      try {
+        const res = await duplicateTask(task._id).unwrap();
+        toast.success(res?.message);
+        setTimeout(() => {
+          setOpenDialog(false);
+        }, 500);
+      } catch (error) {
+        console.log(error);
+        toast.error(error?.data?.message || error.error || "Something went wrong!");
+      }
   };
   const deleteClicks = () => {
-    if (window.confirm('Are you sure you want to delete this task?')) {
-      alert('Task deleted!');
-      // TODO: Implement actual delete logic
+    if (window.confirm("Are you sure you want to delete this task?")) {
+      deleteHandler();
     }
   };
-  const deleteHandler = () => {
-    alert('Delete confirmed!');
-    // TODO: Implement actual delete logic
+  const deleteHandler = async() => {
+       try {
+        console.log("Moving task to trash with ID:", task._id);
+        const res = await trashTaskMutation(task._id).unwrap();
+        console.log("Trash response:", res);
+        toast.success(res?.message || "Task moved to trash successfully");
+      } catch (error) {
+        console.error("Trash error:", error);
+        toast.error(error?.data?.message || error.error || "Something went wrong!");
+      }
   };
 
   const items = [
@@ -120,7 +140,7 @@ const TaskDialog = ({ task }) => {
         key={new Date().getTime()}
       />
 
-      <AddSubTask open={open} setOpen={setOpen} />
+      <AddSubTask open={open} setOpen={setOpen} id={task._id} />
     </>
   );
 };
