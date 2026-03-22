@@ -17,7 +17,7 @@ export const summary = {
           name: "Codewave Asante",
           title: "Administrator",
           role: "Admin",
-          email: "admin@gmail.com",
+          email: "gmail.com",
         },
         {
           _id: "65c30b96e639681a13def0b5",
